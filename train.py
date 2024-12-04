@@ -7,7 +7,7 @@ NUM_STACKS = 4
 NUM_MEMORY = 10000
 
 env = Env()
-num_action = env.action_space.n
+num_action = env.num_actions()
 
 policy_net = DQN(NUM_STACKS, num_action)
 target_net = DQN(NUM_STACKS, num_action)

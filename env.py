@@ -2,25 +2,30 @@ import gym
 import torch
 from torchvision import transforms
 from collections import deque
+from gym.wrappers.record_video import RecordVideo
+from gym.wrappers import monitoring
 
 
 class Env:
-    def __init__(self):
-        self.env = gym.make("ALE/Breakout-v5", render_mode="human", frameskip=16)
-        # self.env = gym.make("ALE/Breakout-v5")
+    def __init__(self, num_stack=4, width=84, height=84):
+        self.env = RecordVideo(
+            gym.make("ALE/Breakout-v5", render_mode="rgb_array"),
+            video_folder=".",
+            episode_trigger=lambda x: x % 10 == 0,
+        )
+
         self.env.reset()
         self.action_space = self.env.action_space
-        self.memory = deque([], maxlen=4)
-        self.memory.append(torch.zeros(1, 84, 84, dtype=torch.float32))
-        self.memory.append(torch.zeros(1, 84, 84, dtype=torch.float32))
-        self.memory.append(torch.zeros(1, 84, 84, dtype=torch.float32))
-        self.memory.append(torch.zeros(1, 84, 84, dtype=torch.float32))
+        self.memory = deque(
+            [torch.zeros(1, height, width, dtype=torch.float32)] * num_stack,
+            maxlen=num_stack,
+        )
 
         self.tf = transforms.Compose(
             [
                 transforms.ToPILImage(),
                 transforms.Grayscale(num_output_channels=1),
-                transforms.Resize((84, 84)),
+                transforms.Resize((height, width)),
                 transforms.ToTensor(),
             ]
         )
@@ -28,12 +33,12 @@ class Env:
     def reset(self):
         obs, _ = self.env.reset()
         self.memory.append(self.tf(obs))
-        return torch.stack(list(self.memory)).squeeze(1)
+        return torch.cat(list(self.memory))
 
     def step(self, action):
         obs, reward, done, _, _ = self.env.step(action)
         self.memory.append(self.tf(obs))
-        return torch.stack(list(self.memory)).squeeze(1), reward, done
+        return torch.cat(list(self.memory)), reward, done
 
     def num_actions(self):
         return self.env.action_space.n

@@ -36,18 +36,10 @@ class Agent:
         states = torch.stack(batch.state)
         next_states = torch.stack(batch.next_state)
 
-        actions = torch.unsqueeze(torch.tensor(batch.action), dim=1)
-        rewards = torch.unsqueeze(torch.tensor(batch.reward), dim=1)
-        dones = torch.unsqueeze(torch.tensor(batch.done), dim=1)
+        actions = torch.tensor(batch.action).unsqueeze(1)
+        rewards = torch.tensor(batch.reward).unsqueeze(1)
+        dones = torch.tensor(batch.done).unsqueeze(1)
 
-        # states = batch.stat, actions, rewards, next_states, dones = zip(*batch)
-        # states = torch.tensor(states, dtype=torch.float32)
-        # actions = torch.tensor(actions, dtype=torch.long)
-        # rewards = torch.tensor(rewards, dtype=torch.float32)
-        # next_states = torch.tensor(next_states, dtype=torch.float32)
-        # dones = torch.tensor(dones, dtype=torch.bool)
-
-        # state_action_values = self.policy_net(states).gather(1, actions.unsqueeze(1))
         state_action_values = self.policy_net(states).gather(1, actions)
 
         next_state_values = self.target_net(next_states).max(1)[0].detach()
