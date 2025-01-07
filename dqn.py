@@ -30,9 +30,13 @@ class FCN(nn.Module):
 
 
 class DQN(nn.Module):
-    def __init__(self, in_channels, action_space):
+    def __init__(self, in_channels=4, action_space=4):
         super(DQN, self).__init__()
-        self.cnn = nn.Sequential(CNN(in_channels, 16, 8, 4), CNN(16, 32, 4, 2))
+        # self.cnn = nn.Sequential(CNN(in_channels, 16, 8, 4), CNN(16, 32, 4, 2))
+        
+        self.cnn = nn.Conv2d(in_channels=in_channels, out_channels=32, kernel_size=8, stride=4 )
+        
+        
         self.fc = nn.Sequential(FCN(32 * 9 * 9, 256), FCN(256, action_space, False))
 
     def forward(self, x):
@@ -44,4 +48,8 @@ class DQN(nn.Module):
 
 if __name__ == "__main__":
     in_channels = 4
-    summary(DQN(in_channels=in_channels, action_space=4), (in_channels, 84, 84))
+    summary(
+        DQN(in_channels=in_channels, action_space=4),
+        (in_channels, 84, 84),
+        device="cpu",
+    )

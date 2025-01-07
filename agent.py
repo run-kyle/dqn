@@ -4,6 +4,8 @@ import torch.nn.functional as F
 import random
 from ReplayBuffer import Experience
 
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
 
 class Agent:
     def __init__(
@@ -15,15 +17,14 @@ class Agent:
         self.replay_buffer = replay_buffer
         self.batch_size = batch_size
         self.gamma = gamma
-        self.optimizer = optim.Adam(self.policy_net.parameters(), lr=lr)
+        self.optimizer = optim.RMSprop(policy_net.parameters(), lr=0.00025)
 
     def select_action(self, state, epsilon):
         if random.random() < epsilon:
             return random.choice(range(self.action_space))
         else:
             with torch.no_grad():
-                state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
-                q_values = self.policy_net(state)
+                q_values = self.policy_net(state.unsqueeze(0).to(device))
                 return q_values.argmax().item()
 
     def update(self):
@@ -33,12 +34,12 @@ class Agent:
 
         batch = Experience(*zip(*batch))
 
-        states = torch.stack(batch.state)
-        next_states = torch.stack(batch.next_state)
+        states = torch.stack(batch.state).to(device)
+        next_states = torch.stack(batch.next_state).to(device)
 
-        actions = torch.tensor(batch.action).unsqueeze(1)
-        rewards = torch.tensor(batch.reward).unsqueeze(1)
-        dones = torch.tensor(batch.done).unsqueeze(1)
+        actions = torch.tensor(batch.action).unsqueeze(1).to(device)
+        rewards = torch.tensor(batch.reward).unsqueeze(1).to(device)
+        dones = torch.tensor(batch.done).unsqueeze(1).to(device)
 
         state_action_values = self.policy_net(states).gather(1, actions)
 

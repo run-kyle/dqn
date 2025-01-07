@@ -2,15 +2,20 @@ from env import Env
 from dqn import DQN
 from ReplayBuffer import ReplayBuffer, Experience
 from agent import Agent
+import torch
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 NUM_STACKS = 4
-NUM_MEMORY = 10000
+NUM_MEMORY = 1000000
 
 env = Env()
 num_action = env.num_actions()
 
 policy_net = DQN(NUM_STACKS, num_action)
 target_net = DQN(NUM_STACKS, num_action)
+policy_net.to(device)
+target_net.to(device)
 
 target_net.load_state_dict(policy_net.state_dict())
 
@@ -26,9 +31,9 @@ agent = Agent(
 )
 
 epsilon = 1.0
-epsilon_decay = 0.995
+epsilon_decay = 0.998
 epsilon_min = 0.01
-num_episodes = 1000
+num_episodes = 100000
 
 for episode in range(num_episodes):
     state = env.reset()
@@ -46,6 +51,12 @@ for episode in range(num_episodes):
         state = next_state
 
     epsilon = max(epsilon * epsilon_decay, epsilon_min)
-    agent.update_target_net()
+    if episode % 50 == 0:
+        agent.update_target_net()
 
-    print(f"Episode {episode + 1}, Total Reward: {total_reward}")
+    print(
+        f"Episode {episode + 1}, Total Reward: {total_reward}, Buffer Length: {replay_buffer.__len__()}"
+    )
+
+
+print("done")

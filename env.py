@@ -11,13 +11,14 @@ class Env:
         self.env = RecordVideo(
             gym.make("ALE/Breakout-v5", render_mode="rgb_array"),
             video_folder=".",
-            episode_trigger=lambda x: x % 10 == 0,
+            episode_trigger=lambda x: x % 100 == 0,
         )
-
         self.env.reset()
         self.action_space = self.env.action_space
+        self.num_stack = num_stack
+
         self.memory = deque(
-            [torch.zeros(1, height, width, dtype=torch.float32)] * num_stack,
+            [],
             maxlen=num_stack,
         )
 
@@ -32,7 +33,7 @@ class Env:
 
     def reset(self):
         obs, _ = self.env.reset()
-        self.memory.append(self.tf(obs))
+        [self.memory.append(self.tf(obs)) for _ in range(self.num_stack)]
         return torch.cat(list(self.memory))
 
     def step(self, action):
