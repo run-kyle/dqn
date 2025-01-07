@@ -6,6 +6,15 @@ from gym.wrappers.record_video import RecordVideo
 from gym.wrappers import monitoring
 
 
+def save_image(obs, img_path="temp.png"):
+    to_pil = transforms.ToPILImage()
+    to_pil(obs).save(img_path)
+
+
+def crop_img(img):
+    return img[34:194, :, :]
+
+
 class Env:
     def __init__(self, num_stack=4, width=84, height=84):
         self.env = RecordVideo(
@@ -33,12 +42,12 @@ class Env:
 
     def reset(self):
         obs, _ = self.env.reset()
-        [self.memory.append(self.tf(obs)) for _ in range(self.num_stack)]
+        [self.memory.append(self.tf(crop_img(obs))) for _ in range(self.num_stack)]
         return torch.cat(list(self.memory))
 
     def step(self, action):
         obs, reward, done, _, _ = self.env.step(action)
-        self.memory.append(self.tf(obs))
+        self.memory.append(self.tf(crop_img(obs)))
         return torch.cat(list(self.memory)), reward, done
 
     def num_actions(self):
