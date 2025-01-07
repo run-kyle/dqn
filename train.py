@@ -11,7 +11,8 @@ import torch.nn.functional as F
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 NUM_STACKS = 4
-NUM_MEMORY = 100
+NUM_MEMORY = 1000000
+MIN_MEMORY = 10000
 
 env = Env()
 num_action = env.num_actions()
@@ -34,7 +35,7 @@ num_episodes = 100000
 
 class Trainer:
     def __init__(self, model, replay_buffer):
-        self.batch_size = 32
+        self.batch_size = 256
         self.optimizer = optim.RMSprop(model.parameters(), lr=0.00025)
         self.replay_buffer = replay_buffer
         self.model = model
@@ -53,7 +54,7 @@ class Trainer:
         dones = torch.tensor(batch.done).unsqueeze(1).to(device)
 
         state_action_values = self.model(states).gather(1, actions)
-        next_state_values = self.model(next_states).max(1)[0].detach().unsqueeze(1)
+        next_state_values = self.model(next_states).max(1)[0].unsqueeze(1)
 
         expected_state_action_values = rewards + (
             self.gamma * next_state_values * ~dones
@@ -63,6 +64,8 @@ class Trainer:
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
+        
+        return loss.item()
 
 
 trainer = Trainer(dqn, replay_buffer)
@@ -73,22 +76,28 @@ for episode in range(num_episodes):
     done = False
     total_reward = 0
 
+    episode_len = 0
+    total_loss = 0
     while not done:
-        action = agent.select_action(state, epsilon)
+        action = agent.select_action(state.to(device), epsilon)
         next_state, reward, done = env.step(action)
         replay_buffer.push(Experience(state, action, reward, next_state, done))
 
-        if len(replay_buffer) == NUM_MEMORY:
-            trainer.update_grad()
+        if len(replay_buffer) > MIN_MEMORY:
+            total_loss += trainer.update_grad()
 
         total_reward += reward
         state = next_state
         epsilon = max(1.0 - num_step * epsilon_decay, epsilon_min)
         num_step += 1
+        episode_len += 1
+    total_loss = total_loss / episode_len
 
     print(
-        f"Episode {episode + 1}, Total Reward: {total_reward}, Buffer Length: {replay_buffer.__len__()}, Epsilon: {epsilon}, Step: {num_step}"
+        f"Episode {episode + 1}, Total Reward: {total_reward}, Buffer Length: {replay_buffer.__len__()}, loss: {total_loss}"
     )
-
+    
+    if episode % 100 == 0:
+        torch.save(dqn.state_dict(), f"episode_{episode}_score_{total_reward}.pt")
 
 print("done")
