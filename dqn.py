@@ -21,6 +21,7 @@ class DQN(nn.Module):
         )
 
     def forward(self, x):
+        x = x.float() / 255.0
         x = self.cnn(x)
         x = torch.flatten(x, start_dim=1)
         x = self.fcn(x)

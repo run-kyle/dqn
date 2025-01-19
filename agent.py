@@ -13,8 +13,5 @@ class Agent:
             return random.choice(range(self.num_action))
         else:
             with torch.no_grad():
-                # a = self.q_net.parameters()
-                # b = a.__next__()
-                # print(b[0][-1])
                 q_values = self.q_net(state.unsqueeze(0))
                 return q_values.argmax().item()
